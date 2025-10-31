@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">dz4</string>
+
+    <string name="hint_interval">Интервал (мин)</string>
+
+    <string name="power">Только при заряде</string>
+    <string name="full_power">Только при полной батарее</string>
+
+    <string name="start">Старт</string>
+    <string name="stop">Стоп</string>
 </resources>
