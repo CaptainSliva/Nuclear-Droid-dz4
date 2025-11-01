@@ -4,9 +4,12 @@ import android.Manifest
 import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.audiofx.Virtualizer
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -23,11 +26,9 @@ import com.example.dz4.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
 import java.util.concurrent.TimeUnit
 
-
-val nextTime = "next_time"
+const val nextTime = "next_time"
 
 class MainActivity : AppCompatActivity() {
-
     private lateinit var binding: ActivityMainBinding
 
     @RequiresApi(Build.VERSION_CODES.BAKLAVA)
@@ -48,50 +49,66 @@ class MainActivity : AppCompatActivity() {
         when {
             ContextCompat.checkSelfPermission(
                 this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED -> {}
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.POST_NOTIFICATIONS) -> {}
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED -> {
+
+            }
+
+            ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS) -> {
+                val intent = Intent().apply {
+                    action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+                startActivity(intent)
+            }
+
             else -> {
-                requestPermissions(this,
+                requestPermissions(
+                    this,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    100
+                    100,
                 )
             }
         }
 
         binding.bStart.setOnClickListener { view ->
             try {
-                val etTime = binding.etInterval.text.toString().toLong()
+                val etTime =
+                    binding.etInterval.text
+                        .toString()
+                        .toLong()
                 if (etTime >= 15) {
-                    val data = workDataOf(
-                        nextTime to etTime
-                    )
-                    val constraints = androidx.work.Constraints.Builder()
-                        .setRequiresCharging(binding.cbPower.isChecked)
-                        .setRequiresBatteryNotLow(binding.cbFullPower.isChecked)
-                        .build()
-                    val workRequest = PeriodicWorkRequest.Builder(
-                        TimeWorker::class,
-                        etTime,
-                        TimeUnit.MINUTES)
-                        .addTag(workTag)
-                        .setInputData(data)
-                        .setConstraints(constraints)
-                        .build()
+                    val data =
+                        workDataOf(
+                            nextTime to etTime,
+                        )
+                    val constraints =
+                        androidx.work.Constraints
+                            .Builder()
+                            .setRequiresCharging(binding.cbPower.isChecked)
+                            .setRequiresBatteryNotLow(binding.cbFullPower.isChecked)
+                            .build()
+                    val workRequest =
+                        PeriodicWorkRequest
+                            .Builder(
+                                TimeWorker::class,
+                                etTime,
+                                TimeUnit.MINUTES,
+                            ).addTag(workTag)
+                            .setInputData(data)
+                            .setConstraints(constraints)
+                            .build()
                     WorkManager.getInstance(this).enqueue(workRequest)
                     WorkManager.getInstance(this).getWorkInfoByIdLiveData(workRequest.id).observe(this) { workInfo ->
-                        binding.tvStatus.text =  "$currentStatusText ${workInfo?.state}"
+                        binding.tvStatus.text = "$currentStatusText ${workInfo?.state}"
                     }
                     Snackbar.make(view, "Работа запущена", Snackbar.LENGTH_SHORT).show()
-                }
-                else {
+                } else {
                     Snackbar.make(view, "Число меньше 15", Snackbar.LENGTH_SHORT).show()
                 }
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 Snackbar.make(view, "Введите цифры", Snackbar.LENGTH_SHORT).show()
             }
-
         }
         binding.bStop.setOnClickListener { view ->
             WorkManager.getInstance(this).cancelAllWorkByTag(workTag)
